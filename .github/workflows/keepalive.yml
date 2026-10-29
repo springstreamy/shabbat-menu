@@ -1,0 +1,38 @@
+# מעיר את מסד הנתונים ב-Supabase כל שלושה ימים.
+# בתוכנית החינמית, פרויקט שלא השתמשו בו שבוע מושהה, והאפליקציה מפסיקה לעבוד.
+name: Keep Supabase awake
+
+on:
+  schedule:
+    - cron: "17 6 */3 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ping database
+        run: |
+          URL=$(grep -o 'https://[a-z0-9]*\.supabase\.co' config.js)
+          KEY=$(grep -o 'sb_publishable_[A-Za-z0-9_-]*' config.js)
+          curl -sf -X POST "$URL/rest/v1/rpc/keepalive" \
+            -H "apikey: $KEY" -H "Content-Type: application/json" -d '{}'
+
+      # GitHub מכבה משימות מתוזמנות במאגר שלא היה בו שינוי 60 יום.
+      # לכן פעם ב-50 יום נשמר כאן קובץ קטן, כדי שהמאגר ייחשב פעיל.
+      - name: Keep the schedule enabled
+        run: |
+          last=$(git log -1 --format=%ct)
+          if [ $(( $(date +%s) - last )) -gt $(( 50 * 86400 )) ]; then
+            date -u +%F > .github/keepalive
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .github/keepalive
+            git commit -m "Keep scheduled workflow enabled"
+            git push
+          fi

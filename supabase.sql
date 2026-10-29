@@ -9,7 +9,7 @@ drop table if exists public.dishes, public.events, public.templates, public.mess
   public.groups, public.profiles cascade;
 drop function if exists public.handle_new_user, public.is_member, public.is_group_creator,
   public.my_pid, public.check_code, public.create_group, public.join_lookup,
-  public.join_group, public.claim_person, public.leave_group cascade;
+  public.join_group, public.claim_person, public.leave_group, public.keepalive cascade;
 
 -- ---------- טבלאות ----------
 
@@ -216,6 +216,11 @@ grant execute on function public.is_member, public.my_pid, public.is_group_creat
   public.create_group, public.join_lookup, public.join_group, public.claim_person, public.leave_group
   to authenticated;
 revoke execute on function public.check_code from authenticated;
+
+-- נקראת מ-GitHub כל שלושה ימים (.github/workflows/keepalive.yml),
+-- כדי ש-Supabase לא ישהה את הפרויקט בתוכנית החינמית.
+create function public.keepalive() returns integer language sql stable as $$ select 1 $$;
+grant execute on function public.keepalive to anon;
 
 -- ---------- הרשאות ----------
 
